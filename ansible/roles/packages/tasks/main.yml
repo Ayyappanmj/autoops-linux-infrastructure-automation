@@ -32,7 +32,7 @@
     - not (autoops_destructive_ok | bool)
 
 - name: Simulate an upgrade to count pending updates (read-only)
-  ansible.builtin.command: apt-get -s -o Debug::NoLocking=true upgrade
+  ansible.builtin.command: apt-get -s -o Debug::NoLocking=true upgrade  # noqa: command-instead-of-module
   register: packages_upgrade_sim
   changed_when: false
   check_mode: false

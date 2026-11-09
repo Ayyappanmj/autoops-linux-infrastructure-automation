@@ -39,7 +39,7 @@
     label: "{{ item }}"
 
 - name: Simulate an upgrade to count pending updates (read-only)
-  ansible.builtin.command: apt-get -s -o Debug::NoLocking=true upgrade
+  ansible.builtin.command: apt-get -s -o Debug::NoLocking=true upgrade  # noqa: command-instead-of-module
   register: compliance_upgrade_sim
   changed_when: false
   failed_when: false

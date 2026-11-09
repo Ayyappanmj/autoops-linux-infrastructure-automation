@@ -4,3 +4,4 @@ exclude_paths:
   - .ansible/
 skip_list:
   - var-naming[no-role-prefix]   # config comes from shared config/*.yml (baseline, ssh_policy, ...)
+  - command-instead-of-module    # read-only apt-get simulation query not supported by apt module
