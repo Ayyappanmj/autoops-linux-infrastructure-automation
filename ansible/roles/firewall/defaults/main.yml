@@ -1,0 +1,2 @@
+---
+firewall_ssh_port: "{{ autoops_ssh_port | default(22) }}"

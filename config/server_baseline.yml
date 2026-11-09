@@ -1,0 +1,53 @@
+---
+# Desired baseline for Ubuntu servers. Loaded by Ansible (vars_files) AND by the
+# Python drift/compliance tools, so both always agree on what "correct" means.
+# IMPORTANT: file modes must be QUOTED strings ("0644"); bare 0644 is parsed as an integer.
+
+baseline:
+  timezone: UTC
+  set_hostname: false          # hostname is only changed when this is true
+  hostname: autoops-node
+  packages:                    # approved baseline packages
+    - curl
+    - vim
+    - git
+    - htop
+    - openssh-server
+    - ufw
+    - unattended-upgrades
+    - fail2ban
+  directories:
+    - { path: /opt/autoops, owner: root, group: root, mode: "0755" }
+    - { path: /var/backups/autoops, owner: root, group: root, mode: "0700" }
+  file_permissions:            # files that must already exist; only their metadata is managed
+    - { path: /etc/ssh/sshd_config, owner: root, group: root, mode: "0644", severity: high }
+    - { path: /etc/shadow, owner: root, group: shadow, mode: "0640", severity: critical }
+    - { path: /etc/passwd, owner: root, group: root, mode: "0644", severity: medium }
+  essential_services:
+    - cron
+    - ssh
+  thresholds:                  # percent used; exceeded -> warning in reports
+    disk_percent_warn: 80
+    memory_percent_warn: 85
+
+ssh_policy:
+  apply_changes: false         # false = audit only; true = write drop-in + reload (validated first)
+  allow_password_auth_disable: false   # extra opt-in for the lockout-prone setting
+  service_name: ssh            # Ubuntu uses "ssh" (RHEL family uses "sshd")
+  settings:                    # values are STRINGS (quote yes/no)
+    PermitRootLogin: "no"
+    PasswordAuthentication: "no"
+    PubkeyAuthentication: "yes"
+    PermitEmptyPasswords: "no"
+    X11Forwarding: "no"
+    MaxAuthTries: "4"
+
+firewall_policy:
+  manage: false                # manage UFW rules at all?
+  enable: false                # allow automation to turn UFW on?
+  allow_disable: false         # allow automation to turn UFW off?
+  desired_state: active        # what drift/compliance EXPECT (independent of 'enable')
+  default_incoming: deny
+  default_outgoing: allow
+  allowed_ports:               # the SSH port is always added automatically before enabling
+    - { port: 22, proto: tcp, comment: "SSH" }

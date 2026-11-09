@@ -1,0 +1,5 @@
+---
+ssh_hardening_dropin: /etc/ssh/sshd_config.d/00-autoops.conf
+ssh_hardening_main_config: /etc/ssh/sshd_config
+ssh_hardening_sshd_bin: /usr/sbin/sshd
+ssh_hardening_backup_dir: "{{ autoops_backup_root | default('/var/backups/autoops') }}/ssh"

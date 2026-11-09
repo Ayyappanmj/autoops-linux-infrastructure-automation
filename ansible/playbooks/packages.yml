@@ -1,0 +1,12 @@
+---
+- name: AutoOps - packages and patching
+  hosts: all
+  become: true
+  vars_files:
+    - ../../config/packages.yml
+    - ../../config/server_baseline.yml
+  pre_tasks:
+    - name: Safety guard
+      ansible.builtin.import_tasks: ../tasks/guard.yml
+  roles:
+    - role: packages

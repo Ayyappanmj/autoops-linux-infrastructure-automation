@@ -1,0 +1,17 @@
+---
+# Order: baseline -> users -> packages -> services -> security -> maintenance -> compliance.
+# Always run with --check first. SSH/firewall changes are opt-in (see config/server_baseline.yml).
+- name: Baseline
+  ansible.builtin.import_playbook: baseline.yml
+- name: Users
+  ansible.builtin.import_playbook: users.yml
+- name: Packages
+  ansible.builtin.import_playbook: packages.yml
+- name: Services
+  ansible.builtin.import_playbook: services.yml
+- name: Security
+  ansible.builtin.import_playbook: security.yml
+- name: Maintenance
+  ansible.builtin.import_playbook: maintenance.yml
+- name: Compliance snapshot
+  ansible.builtin.import_playbook: compliance.yml

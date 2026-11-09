@@ -1,0 +1,8 @@
+---
+- name: Back up configuration files
+  ansible.builtin.include_tasks: backup.yml
+  tags: [backup]
+
+- name: Create maintenance report
+  ansible.builtin.include_tasks: report.yml
+  tags: [report]

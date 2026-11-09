@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+# Secrets - never commit
+.env
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+id_ecdsa*
+*.vault_pass
+vault_password*
+ansible/files/public_keys/*.pub
+# Generated output
+reports/*
+!reports/.gitkeep
+*.retry
+.ansible/
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.zip

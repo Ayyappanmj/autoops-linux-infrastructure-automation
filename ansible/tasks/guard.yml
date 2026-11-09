@@ -1,0 +1,28 @@
+---
+# Imported as a pre_task by every playbook.
+- name: Assert environment is a known value
+  ansible.builtin.assert:
+    that:
+      - autoops_environment in ['local', 'development', 'staging', 'production']
+    fail_msg: "autoops_environment must be local, development, staging or production"
+    quiet: true
+
+- name: Refuse real changes on the control machine unless explicitly allowed
+  ansible.builtin.assert:
+    that:
+      - ansible_check_mode or (autoops_allow_local_apply | bool)
+    fail_msg: >-
+      Refusing to modify localhost. Use --check, or pass -e autoops_allow_local_apply=true
+      if you really intend to change this machine (use a disposable VM instead).
+    quiet: true
+  when: ansible_connection | default('ssh') == 'local'
+
+- name: Refuse destructive flag without the confirmation phrase
+  ansible.builtin.assert:
+    that:
+      - (autoops_allow_destructive | bool) == (autoops_destructive_confirm == 'I_UNDERSTAND_THIS_REMOVES_DATA')
+    fail_msg: >-
+      Destructive actions need BOTH autoops_allow_destructive=true AND
+      autoops_destructive_confirm=I_UNDERSTAND_THIS_REMOVES_DATA.
+    quiet: true
+  when: (autoops_allow_destructive | bool) or (autoops_destructive_confirm | length > 0)

@@ -1,0 +1,6 @@
+# {{ ansible_managed }}
+# Written by AutoOps ssh_hardening. Validated with 'sshd -t' before use.
+# Rollback: delete this file, run 'sshd -t', then reload the ssh service.
+{% for key, value in ssh_hardening_effective.items() | sort %}
+{{ key }} {{ value }}
+{% endfor %}

@@ -1,0 +1,3 @@
+{% for r in maintenance_src_stats.results if r.stat.exists %}
+{{ r.stat.checksum }}  {{ r.item | regex_replace('^/', '') | replace('/', '__') }}
+{% endfor %}

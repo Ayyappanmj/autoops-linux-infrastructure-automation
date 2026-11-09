@@ -1,0 +1,75 @@
+---
+- name: Assert user configuration is loaded
+  ansible.builtin.assert:
+    that: user_policy is defined
+    fail_msg: "user_policy missing: run via playbooks/users.yml (vars_files)"
+    quiet: true
+
+- name: Ensure groups exist
+  ansible.builtin.group:
+    name: "{{ item.name }}"
+    state: present
+  loop: "{{ user_policy.groups | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Ensure users exist with configured shell, home and groups
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    comment: "{{ item.comment | default(omit) }}"
+    shell: "{{ item.shell | default('/bin/bash') }}"
+    home: "{{ item.home | default(omit) }}"
+    create_home: "{{ item.create_home | default(true) }}"
+    groups: "{{ item.groups | default(omit) }}"
+    append: true
+    state: present
+  loop: "{{ user_policy.users | default([]) | selectattr('state', 'undefined') | list
+            + user_policy.users | default([]) | selectattr('state', 'defined') | selectattr('state', 'equalto', 'present') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Check for supplied public key files (on the control machine)
+  ansible.builtin.stat:
+    path: "{{ users_public_key_dir }}/{{ item.public_key_file }}"
+  delegate_to: localhost
+  become: false
+  loop: "{{ user_policy.users | default([]) | selectattr('public_key_file', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: users_key_stats
+
+- name: Install authorized SSH public keys
+  ansible.posix.authorized_key:
+    user: "{{ item.item.name }}"
+    key: "{{ lookup('ansible.builtin.file', users_public_key_dir ~ '/' ~ item.item.public_key_file) }}"
+    state: present
+  loop: "{{ users_key_stats.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: item.stat.exists
+
+- name: Warn about missing public key files
+  ansible.builtin.debug:
+    msg: "WARNING: {{ item.item.public_key_file }} not found in {{ users_public_key_dir }}; no key installed for {{ item.item.name }}"
+  loop: "{{ users_key_stats.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: not item.stat.exists
+
+- name: Remove users marked absent (DESTRUCTIVE - needs explicit confirmation)
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    state: absent
+    remove: "{{ item.remove_home | default(false) }}"
+  loop: "{{ user_policy.users | default([]) | selectattr('state', 'defined') | selectattr('state', 'equalto', 'absent') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: autoops_destructive_ok | bool
+
+- name: Report skipped user removals
+  ansible.builtin.debug:
+    msg: "Skipping removal of '{{ item.name }}': destructive actions are not enabled"
+  loop: "{{ user_policy.users | default([]) | selectattr('state', 'defined') | selectattr('state', 'equalto', 'absent') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: not (autoops_destructive_ok | bool)

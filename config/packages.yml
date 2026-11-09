@@ -1,0 +1,13 @@
+---
+package_policy:
+  install:
+    - rsyslog
+  remove:                      # removed ONLY with explicit destructive confirmation
+    - telnetd
+    - rsh-server
+  security_packages:           # packages treated as security-relevant in reports
+    - ufw
+    - fail2ban
+    - unattended-upgrades
+  apply_updates: false         # true = run a safe apt upgrade; the server is NEVER rebooted
+  update_check: true           # simulate an upgrade and report pending updates

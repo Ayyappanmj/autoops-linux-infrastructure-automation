@@ -1,0 +1,25 @@
+---
+# Users and groups. NEVER put passwords or private keys here.
+# SSH public keys are supplied as files in ansible/files/public_keys/<name>.pub
+user_policy:
+  groups:
+    - { name: autoops-admins }
+    - { name: autoops-readonly }
+  users:
+    - name: opsadmin
+      comment: "AutoOps demo operator"
+      shell: /bin/bash
+      home: /home/opsadmin
+      create_home: true
+      groups: [autoops-admins]
+      public_key_file: opsadmin.pub
+      state: present
+    - name: auditor
+      comment: "AutoOps demo read-only auditor"
+      shell: /bin/bash
+      home: /home/auditor
+      create_home: true
+      groups: [autoops-readonly]
+      state: present
+    - name: olduser
+      state: absent            # removal only happens when destructive actions are enabled

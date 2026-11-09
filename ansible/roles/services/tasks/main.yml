@@ -1,0 +1,42 @@
+---
+- name: Assert service configuration is loaded
+  ansible.builtin.assert:
+    that: service_policy is defined
+    fail_msg: "service_policy missing: run via playbooks/services.yml (vars_files)"
+    quiet: true
+
+- name: Start and enable services that should run
+  ansible.builtin.service:
+    name: "{{ item.name }}"
+    state: started
+    enabled: "{{ item.enabled | default(true) }}"
+  loop: "{{ service_policy.services | default([]) | selectattr('state', 'equalto', 'started') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Stop services that must not run (ONLY when service_policy.allow_stop is true)
+  ansible.builtin.service:
+    name: "{{ item.name }}"
+    state: stopped
+    enabled: "{{ item.enabled | default(false) }}"
+  loop: "{{ service_policy.services | default([]) | selectattr('state', 'equalto', 'stopped') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: service_policy.allow_stop | default(false) | bool
+
+- name: Gather service facts for failure reporting
+  ansible.builtin.service_facts:
+
+- name: Identify configured services that are not running
+  ansible.builtin.set_fact:
+    services_not_running: >-
+      {{ service_policy.services | default([]) | selectattr('state', 'equalto', 'started')
+         | map(attribute='name')
+         | reject('in', ansible_facts.services | dict2items
+                  | selectattr('value.state', 'equalto', services_unit_state_ok)
+                  | map(attribute='key') | map('regex_replace', '\\.service$', '') | list)
+         | list }}
+
+- name: Report service health
+  ansible.builtin.debug:
+    msg: "{{ 'All configured services are running' if services_not_running | length == 0 else 'NOT RUNNING: ' ~ (services_not_running | join(', ')) }}"

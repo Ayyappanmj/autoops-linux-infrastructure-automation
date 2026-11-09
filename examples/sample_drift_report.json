@@ -1,0 +1,259 @@
+{
+  "report_type": "drift",
+  "generated_at": "2026-11-09T07:19:04+00:00",
+  "demo": true,
+  "host": "demo-ubuntu-01",
+  "compared_with_previous_snapshot": true,
+  "summary": {
+    "status": "DRIFT_DETECTED",
+    "checks_evaluated": 56,
+    "drift_findings": 21,
+    "unverified_sections": 0,
+    "by_severity": {
+      "critical": 2,
+      "high": 11,
+      "medium": 7,
+      "low": 1,
+      "info": 0
+    }
+  },
+  "findings": [
+    {
+      "source": "expected",
+      "category": "files",
+      "resource": "/etc/shadow (mode)",
+      "status": "mismatch",
+      "expected": "0640",
+      "actual": "0644",
+      "severity": "critical",
+      "remediation": "chmod 640 /etc/shadow"
+    },
+    {
+      "source": "expected",
+      "category": "firewall",
+      "resource": "allow 22/tcp",
+      "status": "missing",
+      "expected": "rule present",
+      "actual": "rule absent",
+      "severity": "critical",
+      "remediation": "ufw allow 22/tcp"
+    },
+    {
+      "source": "previous_snapshot",
+      "category": "files",
+      "resource": "/etc/shadow",
+      "status": "changed",
+      "expected": {
+        "exists": true,
+        "mode": "0640",
+        "owner": "root",
+        "group": "shadow"
+      },
+      "actual": {
+        "exists": true,
+        "mode": "0644",
+        "owner": "root",
+        "group": "shadow"
+      },
+      "severity": "high",
+      "remediation": "Confirm the change was authorised; if not, restore the previous value or re-run the playbook."
+    },
+    {
+      "source": "expected",
+      "category": "firewall",
+      "resource": "ufw status",
+      "status": "mismatch",
+      "expected": "active",
+      "actual": "inactive",
+      "severity": "high",
+      "remediation": "Allow SSH first, then enable UFW (security.yml with firewall_policy.enable=true)"
+    },
+    {
+      "source": "previous_snapshot",
+      "category": "firewall",
+      "resource": "ufw status",
+      "status": "changed",
+      "expected": "active",
+      "actual": "inactive",
+      "severity": "high",
+      "remediation": "Confirm the change was authorised; if not, restore the previous value or re-run the playbook."
+    },
+    {
+      "source": "expected",
+      "category": "packages",
+      "resource": "fail2ban",
+      "status": "missing",
+      "expected": "installed",
+      "actual": "absent",
+      "severity": "high",
+      "remediation": "apt-get install fail2ban (or run ansible/playbooks/packages.yml)"
+    },
+    {
+      "source": "expected",
+      "category": "packages",
+      "resource": "telnetd",
+      "status": "unexpected",
+      "expected": "absent",
+      "actual": "installed",
+      "severity": "high",
+      "remediation": "Remove telnetd; AutoOps only removes packages with explicit destructive confirmation."
+    },
+    {
+      "source": "expected",
+      "category": "services",
+      "resource": "cron",
+      "status": "mismatch",
+      "expected": "running",
+      "actual": "stopped",
+      "severity": "high",
+      "remediation": "systemctl start cron"
+    },
+    {
+      "source": "expected",
+      "category": "services",
+      "resource": "telnet",
+      "status": "unexpected",
+      "expected": "not running",
+      "actual": "running",
+      "severity": "high",
+      "remediation": "systemctl disable --now telnet"
+    },
+    {
+      "source": "expected",
+      "category": "ssh",
+      "resource": "PasswordAuthentication",
+      "status": "mismatch",
+      "expected": "no",
+      "actual": "yes",
+      "severity": "high",
+      "remediation": "Set 'PasswordAuthentication no' (validate with 'sshd -t' before reload; keep a backup)"
+    },
+    {
+      "source": "expected",
+      "category": "ssh",
+      "resource": "PermitRootLogin",
+      "status": "mismatch",
+      "expected": "no",
+      "actual": "yes",
+      "severity": "high",
+      "remediation": "Set 'PermitRootLogin no' (validate with 'sshd -t' before reload; keep a backup)"
+    },
+    {
+      "source": "previous_snapshot",
+      "category": "ssh",
+      "resource": "passwordauthentication",
+      "status": "changed",
+      "expected": "no",
+      "actual": "yes",
+      "severity": "high",
+      "remediation": "Confirm the change was authorised; if not, restore the previous value or re-run the playbook."
+    },
+    {
+      "source": "previous_snapshot",
+      "category": "ssh",
+      "resource": "permitrootlogin",
+      "status": "changed",
+      "expected": "no",
+      "actual": "yes",
+      "severity": "high",
+      "remediation": "Confirm the change was authorised; if not, restore the previous value or re-run the playbook."
+    },
+    {
+      "source": "previous_snapshot",
+      "category": "packages",
+      "resource": "fail2ban",
+      "status": "changed",
+      "expected": "installed",
+      "actual": "removed",
+      "severity": "medium",
+      "remediation": "Confirm the change was authorised; if not, restore the previous value or re-run the playbook."
+    },
+    {
+      "source": "previous_snapshot",
+      "category": "services",
+      "resource": "cron",
+      "status": "changed",
+      "expected": {
+        "state": "running",
+        "enabled": true
+      },
+      "actual": {
+        "state": "stopped",
+        "enabled": true
+      },
+      "severity": "medium",
+      "remediation": "Confirm the change was authorised; if not, restore the previous value or re-run the playbook."
+    },
+    {
+      "source": "previous_snapshot",
+      "category": "services",
+      "resource": "telnet",
+      "status": "changed",
+      "expected": null,
+      "actual": {
+        "state": "running",
+        "enabled": true
+      },
+      "severity": "medium",
+      "remediation": "Confirm the change was authorised; if not, restore the previous value or re-run the playbook."
+    },
+    {
+      "source": "expected",
+      "category": "ssh",
+      "resource": "X11Forwarding",
+      "status": "mismatch",
+      "expected": "no",
+      "actual": "yes",
+      "severity": "medium",
+      "remediation": "Set 'X11Forwarding no' (validate with 'sshd -t' before reload; keep a backup)"
+    },
+    {
+      "source": "previous_snapshot",
+      "category": "ssh",
+      "resource": "x11forwarding",
+      "status": "changed",
+      "expected": "no",
+      "actual": "yes",
+      "severity": "medium",
+      "remediation": "Confirm the change was authorised; if not, restore the previous value or re-run the playbook."
+    },
+    {
+      "source": "previous_snapshot",
+      "category": "users",
+      "resource": "opsadmin",
+      "status": "changed",
+      "expected": {
+        "shell": "/bin/bash",
+        "groups": [
+          "autoops-admins"
+        ]
+      },
+      "actual": {
+        "shell": "/bin/bash",
+        "groups": []
+      },
+      "severity": "medium",
+      "remediation": "Confirm the change was authorised; if not, restore the previous value or re-run the playbook."
+    },
+    {
+      "source": "expected",
+      "category": "users",
+      "resource": "opsadmin (group autoops-admins)",
+      "status": "missing",
+      "expected": "member of autoops-admins",
+      "actual": "not a member",
+      "severity": "medium",
+      "remediation": "usermod -aG autoops-admins opsadmin"
+    },
+    {
+      "source": "previous_snapshot",
+      "category": "packages",
+      "resource": "telnetd",
+      "status": "changed",
+      "expected": "absent",
+      "actual": "installed",
+      "severity": "low",
+      "remediation": "Confirm the change was authorised; if not, restore the previous value or re-run the playbook."
+    }
+  ]
+}

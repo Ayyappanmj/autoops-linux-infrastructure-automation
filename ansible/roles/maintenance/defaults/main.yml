@@ -1,0 +1,4 @@
+---
+maintenance_backup_root: "{{ autoops_backup_root | default('/var/backups/autoops') }}"
+maintenance_report_dir: "{{ autoops_report_dir | default('/var/tmp/autoops') }}"
+maintenance_backup_files: "{{ autoops_backup_files | default(['/etc/ssh/sshd_config', '/etc/hosts', '/etc/fstab']) }}"

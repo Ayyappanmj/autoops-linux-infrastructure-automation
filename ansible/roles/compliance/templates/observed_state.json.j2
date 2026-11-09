@@ -1,0 +1,64 @@
+{%- set ns = namespace(services={}, files={}, users={}, ssh={}, allowed=[]) -%}
+{%- for name, svc in (ansible_facts.services | default({})).items() -%}
+{%- set _ = ns.services.update({name | regex_replace('\\.service$', ''): {'state': svc.state | default('unknown'), 'enabled': (svc.status | default('unknown')) == 'enabled'}}) -%}
+{%- endfor -%}
+{%- for r in compliance_file_stats.results -%}
+{%- if r.stat.exists -%}
+{%- set _ = ns.files.update({r.item.path: {'exists': true, 'mode': r.stat.mode, 'owner': r.stat.pw_name, 'group': r.stat.gr_name}}) -%}
+{%- else -%}
+{%- set _ = ns.files.update({r.item.path: {'exists': false}}) -%}
+{%- endif -%}
+{%- endfor -%}
+{%- for u in (user_policy.users | default([]) | map(attribute='name') | list) -%}
+{%- if u in ansible_facts.getent_passwd -%}
+{%- set gl = [] -%}
+{%- for gname, gent in ansible_facts.getent_group.items() -%}
+{%- if u in (gent[2] | default('')).split(',') -%}{%- set _ = gl.append(gname) -%}{%- endif -%}
+{%- endfor -%}
+{%- set _ = ns.users.update({u: {'shell': ansible_facts.getent_passwd[u][5], 'groups': gl}}) -%}
+{%- endif -%}
+{%- endfor -%}
+{%- for line in (compliance_sshd.stdout_lines | default([])) -%}
+{%- set parts = line.split(' ', 1) -%}
+{%- if parts | length == 2 -%}{%- set _ = ns.ssh.update({parts[0]: parts[1]}) -%}{%- endif -%}
+{%- endfor -%}
+{%- set ufw_lines = compliance_ufw.stdout_lines | default([]) -%}
+{%- for line in ufw_lines if 'ALLOW' in line and '(v6)' not in line and line.split() | length > 0 and line.split()[0][0].isdigit() -%}
+{%- set tok = line.split()[0] -%}
+{%- if '/' in tok -%}{%- set _ = ns.allowed.append(tok) -%}
+{%- else -%}{%- set _ = ns.allowed.append(tok ~ '/tcp') -%}{%- set _ = ns.allowed.append(tok ~ '/udp') -%}
+{%- endif -%}
+{%- endfor -%}
+{%- set root_mount = ansible_facts.mounts | selectattr('mount', 'equalto', '/') | list | first | default({}) -%}
+{%- set out = {
+  'demo': false,
+  'hostname': ansible_facts.hostname,
+  'data_source': 'collected by the AutoOps compliance role',
+  'collected_at': ansible_facts.date_time.iso8601,
+  'system': {
+    'os': ansible_facts.distribution ~ ' ' ~ ansible_facts.distribution_version,
+    'kernel': ansible_facts.kernel,
+    'cpu_model': (ansible_facts.processor | default([]))[2] | default('unknown'),
+    'cpu_count': ansible_facts.processor_vcpus | default('unknown'),
+    'memory_total_mb': ansible_facts.memory_mb.real.total,
+    'memory_used_mb': ansible_facts.memory_mb.real.used,
+    'memory_percent': ((ansible_facts.memory_mb.real.used * 100 / ansible_facts.memory_mb.real.total) | round(1)),
+    'disk_mount': '/',
+    'updates_available': (compliance_upgrade_sim.stdout_lines | default([]) | select('match', '^Inst ') | list | length) if compliance_upgrade_sim is not skipped else 'unknown',
+    'reboot_required': compliance_reboot.stat.exists
+  },
+  'packages': ansible_facts.packages.keys() | list | sort,
+  'services': ns.services,
+  'files': ns.files,
+  'groups': ansible_facts.getent_group.keys() | list | sort,
+  'users': ns.users,
+  'firewall': {
+    'status': 'active' if (ufw_lines | first | default('')).startswith('Status: active') else ('inactive' if (ufw_lines | first | default('')).startswith('Status: inactive') else 'not-installed'),
+    'allowed': ns.allowed
+  }
+} -%}
+{%- if root_mount.size_total | default(0) > 0 -%}
+{%- set _ = out.system.update({'disk_percent': (((root_mount.size_total - root_mount.size_available) * 100 / root_mount.size_total) | round(1))}) -%}
+{%- endif -%}
+{%- if ns.ssh -%}{%- set _ = out.update({'ssh': ns.ssh}) -%}{%- endif -%}
+{{ out | to_nice_json }}

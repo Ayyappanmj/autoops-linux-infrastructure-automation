@@ -1,0 +1,2 @@
+---
+packages_report_dir: "{{ autoops_report_dir | default('/var/tmp/autoops') }}"

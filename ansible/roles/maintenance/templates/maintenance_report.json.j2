@@ -1,0 +1,14 @@
+{% set root_mount = ansible_facts.mounts | selectattr('mount', 'equalto', '/') | list | first | default({}) %}
+{% set disk_pct = (((root_mount.size_total - root_mount.size_available) * 100 / root_mount.size_total) | round(1)) if root_mount.size_total | default(0) > 0 else 'unknown' %}
+{% set pending = (maintenance_upgrade_sim.stdout_lines | default([]) | select('match', '^Inst ') | list | length) if maintenance_upgrade_sim is not skipped else 'unknown' %}
+{{ {
+  'tool': 'autoops',
+  'host': inventory_hostname,
+  'generated': ansible_facts.date_time.iso8601,
+  'os': ansible_facts.distribution ~ ' ' ~ ansible_facts.distribution_version,
+  'memory_percent': ((ansible_facts.memory_mb.real.used * 100 / ansible_facts.memory_mb.real.total) | round(1)),
+  'disk_percent_root': disk_pct,
+  'updates_pending': pending,
+  'reboot_required': maintenance_reboot.stat.exists,
+  'note': 'AutoOps never reboots servers automatically.'
+} | to_nice_json }}

@@ -1,0 +1,74 @@
+---
+# Read-only collection. Every command here only reads state, so check_mode: false is safe.
+- name: Gather installed packages
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Read the effective sshd configuration (sshd -T)
+  ansible.builtin.command: "{{ compliance_sshd_bin }} -T"
+  register: compliance_sshd
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Read UFW status
+  ansible.builtin.command: ufw status
+  register: compliance_ufw
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Stat files whose permissions are managed
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  loop: "{{ baseline.file_permissions | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"
+  register: compliance_file_stats
+
+- name: Read user and group databases
+  ansible.builtin.getent:
+    database: "{{ item }}"
+  loop:
+    - passwd
+    - group
+  loop_control:
+    label: "{{ item }}"
+
+- name: Simulate an upgrade to count pending updates (read-only)
+  ansible.builtin.command: apt-get -s -o Debug::NoLocking=true upgrade
+  register: compliance_upgrade_sim
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: ansible_facts.os_family == 'Debian'
+
+- name: Check whether a reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: compliance_reboot
+
+- name: Create report directory on the control machine
+  ansible.builtin.file:
+    path: "{{ compliance_output_dir }}"
+    state: directory
+    mode: "0750"
+  delegate_to: localhost
+  become: false
+  check_mode: false
+
+- name: Write observed_state.json on the control machine (feeds 'python -m autoops drift/compliance')
+  ansible.builtin.template:
+    src: observed_state.json.j2
+    dest: "{{ compliance_output_dir }}/observed_state.json"
+    mode: "0640"
+  delegate_to: localhost
+  become: false
+  check_mode: false
+
+- name: Tell the operator what to run next
+  ansible.builtin.debug:
+    msg: "Run: python -m autoops compliance --input reports/{{ inventory_hostname }}/observed_state.json"

@@ -1,0 +1,80 @@
+---
+- name: Compute timestamped backup directory
+  ansible.builtin.set_fact:
+    maintenance_backup_dir: "{{ maintenance_backup_root }}/{{ ansible_facts.date_time.iso8601_basic_short }}-{{ inventory_hostname }}"
+
+- name: Check that the backup directory does not already exist
+  ansible.builtin.stat:
+    path: "{{ maintenance_backup_dir }}"
+  register: maintenance_backup_dir_stat
+
+- name: Refuse to overwrite an existing backup
+  ansible.builtin.assert:
+    that: not maintenance_backup_dir_stat.stat.exists
+    fail_msg: "{{ maintenance_backup_dir }} already exists; refusing to overwrite. Wait a second and retry."
+    quiet: true
+
+- name: Create backup directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - "{{ maintenance_backup_dir }}"
+    - "{{ maintenance_backup_dir }}/files"
+
+- name: Stat source files (SHA-256)
+  ansible.builtin.stat:
+    path: "{{ item }}"
+    get_checksum: true
+    checksum_algorithm: sha256
+  loop: "{{ maintenance_backup_files }}"
+  register: maintenance_src_stats
+
+- name: Copy existing files, preserving permissions
+  ansible.builtin.copy:
+    src: "{{ item.item }}"
+    dest: "{{ maintenance_backup_dir }}/files/{{ item.item | regex_replace('^/', '') | replace('/', '__') }}"
+    remote_src: true
+    mode: preserve
+    force: false
+  loop: "{{ maintenance_src_stats.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.stat.exists
+
+- name: Write SHA-256 checksums (verify with sha256sum -c inside files/)
+  ansible.builtin.template:
+    src: SHA256SUMS.j2
+    dest: "{{ maintenance_backup_dir }}/SHA256SUMS"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Write backup metadata
+  ansible.builtin.template:
+    src: backup_metadata.json.j2
+    dest: "{{ maintenance_backup_dir }}/metadata.json"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Write restore instructions
+  ansible.builtin.copy:
+    dest: "{{ maintenance_backup_dir }}/RESTORE.txt"
+    owner: root
+    group: root
+    mode: "0600"
+    content: |
+      Manual restore (nothing is restored automatically):
+        1. cd {{ maintenance_backup_dir }}/files && sha256sum -c ../SHA256SUMS
+        2. Review:  diff <backup file> <live file>   (names use '__' instead of '/')
+        3. Copy back as root with: cp -p <backup file> <live path>
+        4. SSH: run 'sshd -t' BEFORE reloading ssh, and keep an existing session open.
+      Original owner/mode are recorded in metadata.json.
+
+- name: Report backup location
+  ansible.builtin.debug:
+    msg: "Backup {{ 'would be' if ansible_check_mode else 'was' }} written to {{ maintenance_backup_dir }}"

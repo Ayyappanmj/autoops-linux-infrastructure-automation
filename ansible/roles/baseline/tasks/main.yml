@@ -1,0 +1,105 @@
+---
+- name: Assert baseline configuration is loaded
+  ansible.builtin.assert:
+    that:
+      - baseline is defined
+      - baseline.packages is defined
+    fail_msg: "baseline config missing: run via playbooks/baseline.yml (vars_files)"
+    quiet: true
+
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ baseline.timezone }}"
+  when: baseline.timezone is defined
+
+- name: Set hostname (only when explicitly enabled)
+  ansible.builtin.hostname:
+    name: "{{ baseline.hostname }}"
+  when: baseline.set_hostname | default(false) | bool
+
+- name: Update apt cache (skipped if refreshed within the last hour)
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_facts.os_family == 'Debian'
+
+- name: Install approved baseline packages
+  ansible.builtin.apt:
+    name: "{{ baseline.packages }}"
+    state: present
+  when: ansible_facts.os_family == 'Debian'
+
+- name: Ensure required directories exist with correct permissions
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode }}"
+  loop: "{{ baseline.directories | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Check which managed files exist
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  loop: "{{ baseline.file_permissions | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"
+  register: baseline_file_stats
+
+- name: Set secure permissions on existing files
+  ansible.builtin.file:
+    path: "{{ item.item.path }}"
+    state: file
+    owner: "{{ item.item.owner }}"
+    group: "{{ item.item.group }}"
+    mode: "{{ item.item.mode }}"
+  loop: "{{ baseline_file_stats.results }}"
+  loop_control:
+    label: "{{ item.item.path }}"
+  when: item.stat.exists
+
+- name: Warn about managed files that do not exist
+  ansible.builtin.debug:
+    msg: "WARNING: {{ item.item.path }} does not exist; permissions not managed"
+  loop: "{{ baseline_file_stats.results }}"
+  loop_control:
+    label: "{{ item.item.path }}"
+  when: not item.stat.exists
+
+- name: Ensure essential services are enabled and running
+  ansible.builtin.service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop: "{{ baseline.essential_services | default([]) }}"
+
+- name: Gather root filesystem and memory figures
+  ansible.builtin.set_fact:
+    baseline_root_mount: "{{ ansible_facts.mounts | selectattr('mount', 'equalto', '/') | list | first | default({}) }}"
+    baseline_memory_pct: >-
+      {{ ((ansible_facts.memory_mb.real.used | float) * 100 / (ansible_facts.memory_mb.real.total | float)) | round(1) }}
+
+- name: Compute disk usage percentage
+  ansible.builtin.set_fact:
+    baseline_disk_pct: >-
+      {{ (((baseline_root_mount.size_total - baseline_root_mount.size_available) | float) * 100
+      / (baseline_root_mount.size_total | float)) | round(1) }}
+  when: baseline_root_mount.size_total | default(0) | int > 0
+
+- name: Report disk usage
+  ansible.builtin.debug:
+    msg: "Disk usage on /: {{ baseline_disk_pct }}% (warn at {{ baseline.thresholds.disk_percent_warn | default(baseline_default_disk_warn) }}%)"
+  when: baseline_disk_pct is defined
+
+- name: Warn when disk usage exceeds threshold
+  ansible.builtin.debug:
+    msg: "WARNING: disk usage {{ baseline_disk_pct }}% exceeds threshold"
+  when:
+    - baseline_disk_pct is defined
+    - baseline_disk_pct | float >= (baseline.thresholds.disk_percent_warn | default(baseline_default_disk_warn)) | float
+
+- name: Report memory usage
+  ansible.builtin.debug:
+    msg: "Memory usage: {{ baseline_memory_pct }}% (warn at {{ baseline.thresholds.memory_percent_warn | default(baseline_default_memory_warn) }}%)"

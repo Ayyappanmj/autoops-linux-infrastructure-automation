@@ -1,0 +1,58 @@
+---
+- name: Assert package configuration is loaded
+  ansible.builtin.assert:
+    that: package_policy is defined
+    fail_msg: "package_policy missing: run via playbooks/packages.yml (vars_files)"
+    quiet: true
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install configured packages
+  ansible.builtin.apt:
+    name: "{{ package_policy.install | default([]) }}"
+    state: present
+  when: package_policy.install | default([]) | length > 0
+
+- name: Remove configured packages (DESTRUCTIVE - needs explicit confirmation)
+  ansible.builtin.apt:
+    name: "{{ package_policy.remove }}"
+    state: absent
+  when:
+    - package_policy.remove | default([]) | length > 0
+    - autoops_destructive_ok | bool
+
+- name: Report skipped package removals
+  ansible.builtin.debug:
+    msg: "Skipping removal of {{ package_policy.remove | join(', ') }}: destructive actions are not enabled"
+  when:
+    - package_policy.remove | default([]) | length > 0
+    - not (autoops_destructive_ok | bool)
+
+- name: Simulate an upgrade to count pending updates (read-only)
+  ansible.builtin.command: apt-get -s -o Debug::NoLocking=true upgrade
+  register: packages_upgrade_sim
+  changed_when: false
+  check_mode: false
+  when: package_policy.update_check | default(true) | bool
+
+- name: Report pending updates
+  ansible.builtin.debug:
+    msg: "{{ packages_upgrade_sim.stdout_lines | select('match', '^Inst ') | list | length }} package update(s) pending"
+  when: packages_upgrade_sim is not skipped
+
+- name: Apply safe updates (only when package_policy.apply_updates is true)
+  ansible.builtin.apt:
+    upgrade: safe
+  when: package_policy.apply_updates | default(false) | bool
+
+- name: Check whether a reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: packages_reboot_flag
+
+- name: Report reboot requirement (AutoOps never reboots automatically)
+  ansible.builtin.debug:
+    msg: "{{ 'REBOOT REQUIRED - schedule it manually' if packages_reboot_flag.stat.exists else 'No reboot required' }}"

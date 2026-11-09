@@ -1,0 +1,103 @@
+{
+  "demo": true,
+  "hostname": "demo-ubuntu-01",
+  "data_source": "SAMPLE/DEMO DATA",
+  "system": {
+    "os": "Ubuntu 22.04.4 LTS",
+    "kernel": "5.15.0-101-generic",
+    "cpu_model": "Demo vCPU @ 2.00GHz",
+    "cpu_count": 2,
+    "memory_total_mb": 3936,
+    "memory_used_mb": 1180,
+    "memory_percent": 30.0,
+    "disk_mount": "/",
+    "disk_percent": 46.5,
+    "updates_available": 0,
+    "reboot_required": false
+  },
+  "packages": [
+    "curl",
+    "vim",
+    "git",
+    "htop",
+    "openssh-server",
+    "ufw",
+    "unattended-upgrades",
+    "fail2ban",
+    "rsyslog",
+    "bash",
+    "coreutils"
+  ],
+  "services": {
+    "ssh": {
+      "state": "running",
+      "enabled": true
+    },
+    "cron": {
+      "state": "running",
+      "enabled": true
+    },
+    "rsyslog": {
+      "state": "running",
+      "enabled": true
+    },
+    "ufw": {
+      "state": "running",
+      "enabled": true
+    }
+  },
+  "files": {
+    "/etc/ssh/sshd_config": {
+      "exists": true,
+      "mode": "0644",
+      "owner": "root",
+      "group": "root"
+    },
+    "/etc/shadow": {
+      "exists": true,
+      "mode": "0640",
+      "owner": "root",
+      "group": "shadow"
+    },
+    "/etc/passwd": {
+      "exists": true,
+      "mode": "0644",
+      "owner": "root",
+      "group": "root"
+    }
+  },
+  "groups": [
+    "root",
+    "shadow",
+    "autoops-admins",
+    "autoops-readonly"
+  ],
+  "users": {
+    "opsadmin": {
+      "shell": "/bin/bash",
+      "groups": [
+        "autoops-admins"
+      ]
+    },
+    "auditor": {
+      "shell": "/bin/bash",
+      "groups": [
+        "autoops-readonly"
+      ]
+    }
+  },
+  "ssh": {
+    "permitrootlogin": "no",
+    "passwordauthentication": "no",
+    "pubkeyauthentication": "yes",
+    "permitemptypasswords": "no",
+    "x11forwarding": "no",
+    "maxauthtries": "4"
+  },
+  "firewall": {
+    "status": "active",
+    "allowed": [
+      "22/tcp"
+    ]
+  }
+}

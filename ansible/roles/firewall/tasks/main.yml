@@ -1,0 +1,76 @@
+---
+- name: Assert firewall policy is loaded
+  ansible.builtin.assert:
+    that: firewall_policy is defined
+    fail_msg: "firewall_policy missing: run via playbooks/security.yml (vars_files)"
+    quiet: true
+
+- name: Read current UFW status (read-only)
+  ansible.builtin.command: ufw status
+  register: firewall_status
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Report current UFW status
+  ansible.builtin.debug:
+    msg: "{{ (firewall_status.stdout_lines | default(['ufw not installed or not readable'])) | first }}"
+
+- name: Report mode (audit only)
+  ansible.builtin.debug:
+    msg: "firewall_policy.manage is false: AUDIT ONLY. No firewall changes will be made."
+  when: not (firewall_policy.manage | default(false) | bool)
+
+- name: Manage UFW
+  when: firewall_policy.manage | default(false) | bool
+  block:
+    - name: Install ufw
+      ansible.builtin.apt:
+        name: ufw
+        state: present
+
+    - name: Build rule list (the SSH port is ALWAYS included to prevent lockout)
+      ansible.builtin.set_fact:
+        firewall_effective_ports: >-
+          {{ (firewall_policy.allowed_ports | default([]))
+             + [{'port': firewall_ssh_port | int, 'proto': 'tcp', 'comment': 'SSH (added by AutoOps)'}] }}
+
+    - name: Assert the SSH port is in the rule list
+      ansible.builtin.assert:
+        that:
+          - firewall_effective_ports | selectattr('port', 'equalto', firewall_ssh_port | int) | list | length > 0
+        fail_msg: "SSH port {{ firewall_ssh_port }} is not allowed; refusing to continue."
+        quiet: true
+
+    - name: Allow configured ports (rules are added BEFORE any enable)
+      community.general.ufw:
+        rule: allow
+        port: "{{ item.port | string }}"
+        proto: "{{ item.proto | default('tcp') }}"
+        comment: "{{ item.comment | default(omit) }}"
+      loop: "{{ firewall_effective_ports }}"
+      loop_control:
+        label: "{{ item.port }}/{{ item.proto | default('tcp') }}"
+
+    - name: Set default incoming policy
+      community.general.ufw:
+        default: "{{ firewall_policy.default_incoming | default('deny') }}"
+        direction: incoming
+
+    - name: Set default outgoing policy
+      community.general.ufw:
+        default: "{{ firewall_policy.default_outgoing | default('allow') }}"
+        direction: outgoing
+
+    - name: Enable UFW (only when explicitly enabled, and only after SSH is allowed)
+      community.general.ufw:
+        state: enabled
+      when: firewall_policy.enable | default(false) | bool
+
+    - name: Disable UFW (only when explicitly permitted AND the desired state is inactive)
+      community.general.ufw:
+        state: disabled
+      when:
+        - firewall_policy.allow_disable | default(false) | bool
+        - firewall_policy.desired_state | default('active') == 'inactive'
+        - not (firewall_policy.enable | default(false) | bool)

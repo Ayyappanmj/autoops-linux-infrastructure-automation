@@ -1,0 +1,37 @@
+---
+- name: Simulate an upgrade to count pending updates (read-only)
+  ansible.builtin.command: apt-get -s -o Debug::NoLocking=true upgrade
+  register: maintenance_upgrade_sim
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: ansible_facts.os_family == 'Debian'
+
+- name: Check whether a reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: maintenance_reboot
+
+- name: Create report directory on the target
+  ansible.builtin.file:
+    path: "{{ maintenance_report_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Write maintenance report on the target
+  ansible.builtin.template:
+    src: maintenance_report.json.j2
+    dest: "{{ maintenance_report_dir }}/maintenance-{{ ansible_facts.date_time.iso8601_basic_short }}.json"
+    owner: root
+    group: root
+    mode: "0640"
+  register: maintenance_report_file
+
+- name: Fetch the report to the control machine (skipped in check mode)
+  ansible.builtin.fetch:
+    src: "{{ maintenance_report_file.dest }}"
+    dest: "{{ playbook_dir }}/../../reports/{{ inventory_hostname }}/"
+    flat: true
+  when: not ansible_check_mode

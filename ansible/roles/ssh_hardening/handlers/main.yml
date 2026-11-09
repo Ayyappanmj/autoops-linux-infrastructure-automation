@@ -1,0 +1,5 @@
+---
+- name: Reload ssh
+  ansible.builtin.service:
+    name: "{{ ssh_policy.service_name | default('ssh') }}"
+    state: reloaded

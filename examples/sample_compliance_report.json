@@ -1,0 +1,225 @@
+{
+  "report_type": "compliance",
+  "generated_at": "2026-11-09T07:19:04+00:00",
+  "demo": true,
+  "host": "demo-ubuntu-01",
+  "summary": {
+    "status": "NON_COMPLIANT",
+    "total_checks": 19,
+    "passed": 8,
+    "failed": 8,
+    "warnings": 3,
+    "compliance_percent": 42.1
+  },
+  "results": [
+    {
+      "id": "FILE-001",
+      "title": "/etc/shadow is not readable by group/others beyond 0640",
+      "type": "file_mode",
+      "status": "fail",
+      "severity": "critical",
+      "actual": "0644",
+      "message": "mode 0644 (max allowed 0640)",
+      "verifiable": true,
+      "remediation": "chmod 0640 /etc/shadow (or run playbooks/baseline.yml)."
+    },
+    {
+      "id": "FW-001",
+      "title": "Host firewall is active",
+      "type": "firewall_status",
+      "status": "fail",
+      "severity": "high",
+      "actual": "inactive",
+      "message": "firewall is inactive",
+      "verifiable": true,
+      "remediation": "Allow SSH first, then 'ufw enable' (playbooks/security.yml with firewall_policy.enable=true)."
+    },
+    {
+      "id": "PKG-004",
+      "title": "Insecure telnet server is not installed",
+      "type": "package_absent",
+      "status": "fail",
+      "severity": "high",
+      "actual": "installed",
+      "message": "telnetd",
+      "verifiable": true,
+      "remediation": "Remove telnetd (requires explicit destructive confirmation in AutoOps)."
+    },
+    {
+      "id": "SSH-001",
+      "title": "Root SSH login is disabled",
+      "type": "ssh_setting",
+      "status": "fail",
+      "severity": "high",
+      "actual": "yes",
+      "message": "PermitRootLogin = yes",
+      "verifiable": true,
+      "remediation": "Set 'PermitRootLogin no' in /etc/ssh/sshd_config.d/00-autoops.conf (run playbooks/security.yml with ssh_policy.apply_changes=true)."
+    },
+    {
+      "id": "SSH-002",
+      "title": "SSH password authentication is disabled",
+      "type": "ssh_setting",
+      "status": "fail",
+      "severity": "high",
+      "actual": "yes",
+      "message": "PasswordAuthentication = yes",
+      "verifiable": true,
+      "remediation": "Verify key-based login works FIRST, then set 'PasswordAuthentication no' and re-run security.yml with autoops_key_access_verified=true."
+    },
+    {
+      "id": "SVC-003",
+      "title": "telnet service is not running",
+      "type": "service_not_running",
+      "status": "fail",
+      "severity": "high",
+      "actual": "running",
+      "message": "telnet",
+      "verifiable": true,
+      "remediation": "systemctl disable --now telnet"
+    },
+    {
+      "id": "SVC-002",
+      "title": "cron service is running",
+      "type": "service_state",
+      "status": "fail",
+      "severity": "medium",
+      "actual": "stopped, enabled=True",
+      "message": "cron",
+      "verifiable": true,
+      "remediation": "systemctl enable --now cron"
+    },
+    {
+      "id": "SYS-001",
+      "title": "Root filesystem usage is below 90%",
+      "type": "system_threshold",
+      "status": "warn",
+      "severity": "medium",
+      "actual": 91.2,
+      "message": "disk_percent=91.2 (max 90)",
+      "verifiable": true,
+      "remediation": "Free disk space or extend the volume."
+    },
+    {
+      "id": "USR-003",
+      "title": "Operator is a member of the admin group",
+      "type": "user_in_group",
+      "status": "fail",
+      "severity": "medium",
+      "actual": [],
+      "message": "opsadmin in autoops-admins",
+      "verifiable": true,
+      "remediation": "Run playbooks/users.yml"
+    },
+    {
+      "id": "PKG-003",
+      "title": "Brute-force protection (fail2ban) is installed",
+      "type": "package_installed",
+      "status": "warn",
+      "severity": "low",
+      "actual": "absent",
+      "message": "fail2ban",
+      "verifiable": true,
+      "remediation": "apt-get install fail2ban"
+    },
+    {
+      "id": "SSH-005",
+      "title": "X11 forwarding is disabled",
+      "type": "ssh_setting",
+      "status": "warn",
+      "severity": "low",
+      "actual": "yes",
+      "message": "X11Forwarding = yes",
+      "verifiable": true,
+      "remediation": "Set 'X11Forwarding no' unless X11 forwarding is required."
+    },
+    {
+      "id": "FILE-002",
+      "title": "sshd_config is not writable by group/others",
+      "type": "file_mode",
+      "status": "pass",
+      "severity": "high",
+      "actual": "0644",
+      "message": "mode 0644 (max allowed 0644)",
+      "verifiable": true,
+      "remediation": ""
+    },
+    {
+      "id": "SSH-004",
+      "title": "Empty SSH passwords are rejected",
+      "type": "ssh_setting",
+      "status": "pass",
+      "severity": "high",
+      "actual": "no",
+      "message": "PermitEmptyPasswords = no",
+      "verifiable": true,
+      "remediation": ""
+    },
+    {
+      "id": "SVC-001",
+      "title": "SSH service is running and enabled",
+      "type": "service_state",
+      "status": "pass",
+      "severity": "high",
+      "actual": "running, enabled=True",
+      "message": "ssh",
+      "verifiable": true,
+      "remediation": ""
+    },
+    {
+      "id": "PKG-001",
+      "title": "OpenSSH server is installed",
+      "type": "package_installed",
+      "status": "pass",
+      "severity": "medium",
+      "actual": "installed",
+      "message": "openssh-server",
+      "verifiable": true,
+      "remediation": ""
+    },
+    {
+      "id": "PKG-002",
+      "title": "Automatic security updates package is installed",
+      "type": "package_installed",
+      "status": "pass",
+      "severity": "medium",
+      "actual": "installed",
+      "message": "unattended-upgrades",
+      "verifiable": true,
+      "remediation": ""
+    },
+    {
+      "id": "SSH-003",
+      "title": "SSH public-key authentication is enabled",
+      "type": "ssh_setting",
+      "status": "pass",
+      "severity": "medium",
+      "actual": "yes",
+      "message": "PubkeyAuthentication = yes",
+      "verifiable": true,
+      "remediation": ""
+    },
+    {
+      "id": "USR-001",
+      "title": "Admin group exists",
+      "type": "group_exists",
+      "status": "pass",
+      "severity": "medium",
+      "actual": "exists",
+      "message": "autoops-admins",
+      "verifiable": true,
+      "remediation": ""
+    },
+    {
+      "id": "USR-002",
+      "title": "Operator account exists",
+      "type": "user_exists",
+      "status": "pass",
+      "severity": "medium",
+      "actual": "exists",
+      "message": "opsadmin",
+      "verifiable": true,
+      "remediation": ""
+    }
+  ]
+}

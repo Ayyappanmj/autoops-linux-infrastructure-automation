@@ -1,0 +1,4 @@
+# Linux / WSL only. Not needed for Windows validation mode.
+-r requirements-dev.txt
+ansible-core>=2.16,<2.19
+ansible-lint>=24.2

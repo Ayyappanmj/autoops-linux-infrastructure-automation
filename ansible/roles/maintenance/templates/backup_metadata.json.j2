@@ -1,0 +1,9 @@
+{% set ns = namespace(files=[], skipped=[]) %}
+{% for r in maintenance_src_stats.results %}
+{% if r.stat.exists %}
+{% set _ = ns.files.append({'path': r.item, 'mode': r.stat.mode, 'owner': r.stat.pw_name, 'group': r.stat.gr_name, 'size': r.stat.size, 'sha256': r.stat.checksum}) %}
+{% else %}
+{% set _ = ns.skipped.append(r.item) %}
+{% endif %}
+{% endfor %}
+{{ {'tool': 'autoops', 'host': inventory_hostname, 'created': ansible_facts.date_time.iso8601, 'files': ns.files, 'skipped_missing': ns.skipped} | to_nice_json }}

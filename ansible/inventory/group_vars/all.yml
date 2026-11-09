@@ -1,0 +1,17 @@
+---
+# Global safety switches. ALL of these must stay at their safe defaults in version control.
+# Override per run with -e, e.g.
+#   -e autoops_allow_destructive=true -e autoops_destructive_confirm=I_UNDERSTAND_THIS_REMOVES_DATA
+autoops_environment: development
+autoops_allow_destructive: false       # gate 1 for removals (users, packages)
+autoops_destructive_confirm: ""        # gate 2: must equal I_UNDERSTAND_THIS_REMOVES_DATA
+autoops_key_access_verified: false     # set true only after you proved key-based SSH login works
+autoops_allow_local_apply: false       # allow non-check-mode runs against localhost
+autoops_destructive_ok: "{{ autoops_allow_destructive | bool and autoops_destructive_confirm == 'I_UNDERSTAND_THIS_REMOVES_DATA' }}"
+autoops_ssh_port: "{{ ansible_port | default(22) }}"
+autoops_backup_root: /var/backups/autoops
+autoops_report_dir: /var/tmp/autoops
+autoops_backup_files:
+  - /etc/ssh/sshd_config
+  - /etc/hosts
+  - /etc/fstab

@@ -1,0 +1,3 @@
+---
+baseline_default_disk_warn: 80
+baseline_default_memory_warn: 85

@@ -1,0 +1,133 @@
+---
+# Compliance rules evaluated by `python -m autoops compliance`.
+# type decides how the rule is checked. on_fail: warn downgrades a failure to a warning.
+rules:
+  - id: SSH-001
+    title: Root SSH login is disabled
+    type: ssh_setting
+    key: PermitRootLogin
+    expected: ["no"]
+    severity: high
+    remediation: "Set 'PermitRootLogin no' in /etc/ssh/sshd_config.d/00-autoops.conf (run playbooks/security.yml with ssh_policy.apply_changes=true)."
+  - id: SSH-002
+    title: SSH password authentication is disabled
+    type: ssh_setting
+    key: PasswordAuthentication
+    expected: ["no"]
+    severity: high
+    remediation: "Verify key-based login works FIRST, then set 'PasswordAuthentication no' and re-run security.yml with autoops_key_access_verified=true."
+  - id: SSH-003
+    title: SSH public-key authentication is enabled
+    type: ssh_setting
+    key: PubkeyAuthentication
+    expected: ["yes"]
+    severity: medium
+    remediation: "Set 'PubkeyAuthentication yes'."
+  - id: SSH-004
+    title: Empty SSH passwords are rejected
+    type: ssh_setting
+    key: PermitEmptyPasswords
+    expected: ["no"]
+    severity: high
+    remediation: "Set 'PermitEmptyPasswords no'."
+  - id: SSH-005
+    title: X11 forwarding is disabled
+    type: ssh_setting
+    key: X11Forwarding
+    expected: ["no"]
+    severity: low
+    on_fail: warn
+    remediation: "Set 'X11Forwarding no' unless X11 forwarding is required."
+  - id: FW-001
+    title: Host firewall is active
+    type: firewall_status
+    expected: active
+    severity: high
+    remediation: "Allow SSH first, then 'ufw enable' (playbooks/security.yml with firewall_policy.enable=true)."
+  - id: PKG-001
+    title: OpenSSH server is installed
+    type: package_installed
+    package: openssh-server
+    severity: medium
+    remediation: "apt-get install openssh-server"
+  - id: PKG-002
+    title: Automatic security updates package is installed
+    type: package_installed
+    package: unattended-upgrades
+    severity: medium
+    remediation: "apt-get install unattended-upgrades"
+  - id: PKG-003
+    title: Brute-force protection (fail2ban) is installed
+    type: package_installed
+    package: fail2ban
+    severity: low
+    on_fail: warn
+    remediation: "apt-get install fail2ban"
+  - id: PKG-004
+    title: Insecure telnet server is not installed
+    type: package_absent
+    package: telnetd
+    severity: high
+    remediation: "Remove telnetd (requires explicit destructive confirmation in AutoOps)."
+  - id: FILE-001
+    title: /etc/shadow is not readable by group/others beyond 0640
+    type: file_mode
+    path: /etc/shadow
+    max_mode: "0640"
+    severity: critical
+    remediation: "chmod 0640 /etc/shadow (or run playbooks/baseline.yml)."
+  - id: FILE-002
+    title: sshd_config is not writable by group/others
+    type: file_mode
+    path: /etc/ssh/sshd_config
+    max_mode: "0644"
+    severity: high
+    remediation: "chmod 0644 /etc/ssh/sshd_config"
+  - id: SVC-001
+    title: SSH service is running and enabled
+    type: service_state
+    service: ssh
+    running: true
+    enabled: true
+    severity: high
+    remediation: "systemctl enable --now ssh"
+  - id: SVC-002
+    title: cron service is running
+    type: service_state
+    service: cron
+    running: true
+    severity: medium
+    remediation: "systemctl enable --now cron"
+  - id: SVC-003
+    title: telnet service is not running
+    type: service_not_running
+    service: telnet
+    severity: high
+    remediation: "systemctl disable --now telnet"
+  - id: USR-001
+    title: Admin group exists
+    type: group_exists
+    group: autoops-admins
+    severity: medium
+    remediation: "Run playbooks/users.yml"
+  - id: USR-002
+    title: Operator account exists
+    type: user_exists
+    user: opsadmin
+    severity: medium
+    remediation: "Run playbooks/users.yml"
+  - id: USR-003
+    title: Operator is a member of the admin group
+    type: user_in_group
+    user: opsadmin
+    group: autoops-admins
+    severity: medium
+    remediation: "Run playbooks/users.yml"
+  - id: SYS-001
+    title: Root filesystem usage is below 90%
+    type: system_threshold
+    key: disk_percent
+    max: 90
+    severity: medium
+    on_fail: warn
+    remediation: "Free disk space or extend the volume."

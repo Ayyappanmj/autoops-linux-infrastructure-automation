@@ -1,0 +1,69 @@
+---
+name: validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python-validation:
+    name: Python tests and static validation (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Run unit tests
+        run: python -m pytest
+      - name: Static project validation (YAML, config, inventory, secrets)
+        run: python -m autoops validate
+      - name: Inventory check
+        run: python -m autoops inventory-check
+      - name: Generate demo health report
+        run: python -m autoops report --demo --json --output reports/ci-health-${{ matrix.os }}.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reports-${{ matrix.os }}
+          path: reports/*.json
+
+  ansible-validation:
+    name: Ansible syntax check and lint (Linux only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Ansible tooling
+        run: python -m pip install -r requirements-ansible.txt
+      - name: Install Ansible collections
+        run: ansible-galaxy collection install -r ansible/requirements.yml
+      - name: yamllint
+        run: yamllint -c .yamllint .
+      - name: Playbook syntax check (does not execute anything)
+        working-directory: ansible
+        env:
+          ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
+        run: |
+          for playbook in playbooks/*.yml; do
+            echo "== $playbook"
+            ansible-playbook -i inventory/localhost.yml --syntax-check "$playbook"
+          done
+      - name: ansible-lint
+        working-directory: ansible
+        run: ansible-lint
+      - name: Backup script smoke test
+        run: python -m pytest tests/test_backup_script.py

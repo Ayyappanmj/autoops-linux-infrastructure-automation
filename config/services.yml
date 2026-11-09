@@ -1,0 +1,10 @@
+---
+service_policy:
+  allow_stop: false            # services are only stopped when this is true
+  services:
+    - { name: ssh, state: started, enabled: true }
+    - { name: cron, state: started, enabled: true }
+    - { name: rsyslog, state: started, enabled: true }
+  forbidden:                   # reported by drift detection if running
+    - telnet
+    - rsh

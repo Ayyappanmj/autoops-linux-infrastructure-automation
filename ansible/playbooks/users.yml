@@ -1,0 +1,11 @@
+---
+- name: AutoOps - users and groups
+  hosts: all
+  become: true
+  vars_files:
+    - ../../config/users.yml
+  pre_tasks:
+    - name: Safety guard
+      ansible.builtin.import_tasks: ../tasks/guard.yml
+  roles:
+    - role: users

@@ -1,0 +1,6 @@
+---
+profile: moderate
+exclude_paths:
+  - .ansible/
+skip_list:
+  - var-naming[no-role-prefix]   # config comes from shared config/*.yml (baseline, ssh_policy, ...)

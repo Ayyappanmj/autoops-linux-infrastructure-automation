@@ -1,0 +1,10 @@
+---
+# Local control node only. The guard task refuses real (non check-mode) runs against
+# localhost unless autoops_allow_local_apply=true.
+all:
+  children:
+    local:
+      hosts:
+        localhost:
+          ansible_connection: local
+          ansible_python_interpreter: "{{ ansible_playbook_python }}"
